@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Система документооборота - Расширенная версия</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f6fa;
+    }
+    
+    .auth-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .auth-box {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      width: 400px;
+    }
+    
+    .auth-box h2 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 30px;
+    }
+    
+    .auth-tabs {
+      display: flex;
+      margin-bottom: 20px;
+    }
+    
+    .auth-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      background: #ecf0f1;
+      border: none;
+      transition: all 0.3s;
+    }
+    
+    .auth-tab.active {
+      background: #3498db;
+      color: white;
+    }
+    
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+    
+    .sidebar {
+      width: 300px;
+      background: #2c3e50;
+      color: white;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      background: #34495e;
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .notification-badge {
+      position: relative;
+      cursor: pointer;
+    }
+    
+    .notification-count {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #e74c3c;
+      color: white;
+      border-radius: 50%;
+      padding: 2px 6px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    
+    .notifications-panel {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+      width: 350px;
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 1001;
+      display: none;
+    }
+    
+    .notifications-panel.active {
+      display: block;
+    }
+    
+    .notification-item {
+      padding: 15px;
+      border-bottom: 1px solid #ecf0f1;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .notification-item:hover {
+      background: #f8f9fa;
+    }
+    
+    .notification-item.unread {
+      background: #e8f4fd;
+    }
+    
+    .notification-item:last-child {
+      border-bottom: none;
+    }
+    
+    .search-panel {
+      background: white;
+      padding: 15px 20px;
+      border-bottom: 1px solid #bdc3c7;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .search-panel input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #bdc3c7;
+      border-radius: 5px;
+    }
+    
+    .search-panel select {
+      padding: 8px 12px;
+      border: 1px solid #bdc3c7;
+      border-radius: 5px;
+    }
+    
+    .stats-panel {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+    }
+    
+    .stat-card {
+      background: rgba(255,255,255,0.1);
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .stat-card h3 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+    
+    .stat-card p {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    
+    .comments-section {
+      background: #f8f9fa;
+      padding: 15px;
+      border-top: 1px solid #bdc3c7;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .comment-item {
+      background: white;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      font-size: 13px;
+    }
+    
+    .comment-item .author {
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+    
+    .comment-form {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .comment-form input {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #bdc3c7;
+      border-radius: 5px;
+    }
+    
+    .versions-list {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 5px;
+    }
+    
+    .version-item {
+      padding: 5px;
+      font-size: 12px;
+      color: #7f8c8d;
+      border-bottom: 1px solid #ecf0f1;
+    }
+    
+    .documents-panel {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .chat-panel {
+      height: 300px;
+      background: white;
+      border-top: 2px solid #bdc3c7;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .document-card {
+      background: white;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .document-card:hover {
+      transform: translateY(-2px);
+    }
+    
+    .document-card h3 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+    
+    .document-card p {
+      color: #7f8c8d;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+    
+    .document-card .meta {
+      font-size: 12px;
+      color: #95a5a6;
+    }
+    
+    .status-active {
+      color: #27ae60;
+      font-weight: bold;
+    }
+    
+    .status-archive {
+      color: #95a5a6;
+    }
+    
+    .btn {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+      transition: background 0.3s;
+    }
+    
+    .btn:hover {
+      background: #2980b9;
+    }
+    
+    .btn-danger {
+      background: #e74c3c;
+    }
+    
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+    
+    .btn-success {
+      background: #27ae60;
+    }
+    
+    .btn-success:hover {
+      background: #229954;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #2c3e50;
+      font-weight: bold;
+    }
+    
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #bdc3c7;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    
+    .form-group textarea {
+      height: 100px;
+      resize: vertical;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+    }
+    
+    .modal.active {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      width: 500px;
+      max-width: 90%;
+    }
+    
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+      background: #ecf0f1;
+    }
+    
+    .message {
+      margin-bottom: 10px;
+      padding: 10px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .message .author {
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+    
+    .message .timestamp {
+      font-size: 11px;
+      color: #95a5a6;
+    }
+    
+    .chat-input {
+      display: flex;
+      padding: 15px;
+      background: white;
+      border-top: 1px solid #bdc3c7;
+    }
+    
+    .chat-input input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #bdc3c7;
+      border-radius: 5px;
+      margin-right: 10px;
+    }
+    
+    .users-list {
+      margin-top: 20px;
+    }
+    
+    .user-item {
+      padding: 8px;
+      background: #34495e;
+      margin-bottom: 5px;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    
+    .user-online {
+      color: #2ecc71;
+    }
+    
+    .typing-indicator {
+      font-style: italic;
+      color: #95a5a6;
+      font-size: 12px;
+      padding: 5px 15px;
+    }
+    
+    .file-info {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- Окно авторизации -->
+  <div class="auth-container" id="authContainer">
+    <div class="auth-box">
+      <h2>🔐 Авторизация</h2>
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="showLogin()">Вход</button>
+        <button class="auth-tab" onclick="showRegister()">Регистрация</button>
+      </div>
+      
+      <form id="loginForm" onsubmit="login(event)">
+        <div class="form-group">
+          <label>Имя пользователя:</label>
+          <input type="text" id="loginUsername" required>
+        </div>
+        <div class="form-group">
+          <label>Пароль:</label>
+          <input type="password" id="loginPassword" required>
+        </div>
+        <button type="submit" class="btn" style="width: 100%;">Войти</button>
+      </form>
+      
+      <form id="registerForm" class="hidden" onsubmit="register(event)">
+        <div class="form-group">
+          <label>Имя пользователя:</label>
+          <input type="text" id="registerUsername" required>
+        </div>
+        <div class="form-group">
+          <label>Пароль (мин. 6 символов):</label>
+          <input type="password" id="registerPassword" required minlength="6">
+        </div>
+        <button type="submit" class="btn btn-success" style="width: 100%;">Зарегистрироваться</button>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Основной интерфейс -->
+  <div class="container hidden" id="mainContainer">
+    <div class="sidebar">
+      <h2>👥 Пользователи</h2>
+      <div id="usersList" class="users-list"></div>
+      
+      <h2 style="margin-top: 30px;">📄 Документы</h2>
+      <button class="btn" onclick="openModal()" style="width: 100%; margin-top: 10px;">+ Создать документ</button>
+    </div>
+    
+    <div class="main-content">
+      <div class="header">
+        <h1>🏢 Система документооборота организации</h1>
+        <div class="user-info">
+          <span id="currentUserDisplay"></span>
+          <div class="notification-badge" onclick="toggleNotifications()">
+            🔔 <span class="notification-count hidden" id="notificationCount">0</span>
+          </div>
+          <button class="btn btn-danger" onclick="logout()">Выход</button>
+          <div class="notifications-panel" id="notificationsPanel"></div>
+        </div>
+      </div>
+      
+      <div class="stats-panel" id="statsPanel">
+        <div class="stat-card">
+          <h3 id="statTotalDocs">0</h3>
+          <p>Всего документов</p>
+        </div>
+        <div class="stat-card">
+          <h3 id="statActiveDocs">0</h3>
+          <p>Активных</p>
+        </div>
+        <div class="stat-card">
+          <h3 id="statMessages">0</h3>
+          <p>Сообщений</p>
+        </div>
+        <div class="stat-card">
+          <h3 id="statUsers">0</h3>
+          <p>Пользователей</p>
+        </div>
+      </div>
+      
+      <div class="search-panel">
+        <input type="text" id="searchInput" placeholder="Поиск документов..." onkeyup="searchDocuments()">
+        <select id="searchType" onchange="searchDocuments()">
+          <option value="">Все типы</option>
+          <option value="general">Общий</option>
+          <option value="contract">Договор</option>
+          <option value="report">Отчет</option>
+          <option value="memo">Служебная записка</option>
+          <option value="order">Приказ</option>
+        </select>
+        <select id="searchStatus" onchange="searchDocuments()">
+          <option value="">Все статусы</option>
+          <option value="active">Активные</option>
+          <option value="archive">Архив</option>
+        </select>
+      </div>
+      
+      <div class="documents-panel" id="documentsPanel">
+        <h2>Все документы</h2>
+        <div id="documentsList"></div>
+      </div>
+      
+      <div class="chat-panel">
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="typing-indicator" id="typingIndicator"></div>
+        <div class="chat-input">
+          <input type="text" id="messageInput" placeholder="Введите сообщение..." onkeypress="handleKeyPress(event)" oninput="handleTyping()">
+          <button class="btn" onclick="sendMessage()">Отправить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Модальное окно создания документа -->
+  <div class="modal" id="documentModal">
+    <div class="modal-content">
+      <h2>Создать новый документ</h2>
+      <form id="documentForm" onsubmit="createDocument(event)">
+        <div class="form-group">
+          <label>Заголовок:</label>
+          <input type="text" id="docTitle" required>
+        </div>
+        <div class="form-group">
+          <label>Автор:</label>
+          <input type="text" id="docAuthor" required>
+        </div>
+        <div class="form-group">
+          <label>Тип документа:</label>
+          <select id="docType">
+            <option value="general">Общий</option>
+            <option value="contract">Договор</option>
+            <option value="report">Отчет</option>
+            <option value="memo">Служебная записка</option>
+            <option value="order">Приказ</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Содержание:</label>
+          <textarea id="docContent" required></textarea>
+        </div>
+        <div class="form-group">
+          <label>Прикрепить файл:</label>
+          <input type="file" id="docFile">
+        </div>
+        <button type="submit" class="btn">Создать</button>
+        <button type="button" class="btn btn-danger" onclick="closeModal()">Отмена</button>
+      </form>
+    </div>
+  </div>
+  
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let currentUser = null;
+    let authToken = null;
+    
+    // Переключение между входом и регистрацией
+    function showLogin() {
+      document.getElementById('loginForm').classList.remove('hidden');
+      document.getElementById('registerForm').classList.add('hidden');
+      document.querySelector('.auth-tab:first-child').classList.add('active');
+      document.querySelector('.auth-tab:last-child').classList.remove('active');
+    }
+    
+    function showRegister() {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('registerForm').classList.remove('hidden');
+      document.querySelector('.auth-tab:first-child').classList.remove('active');
+      document.querySelector('.auth-tab:last-child').classList.add('active');
+    }
+    
+    // Регистрация
+    async function register(event) {
+      event.preventDefault();
+      
+      const username = document.getElementById('registerUsername').value;
+      const password = document.getElementById('registerPassword').value;
+      
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          alert('Регистрация успешна! Теперь войдите.');
+          showLogin();
+        } else {
+          alert(data.error || 'Ошибка регистрации');
+        }
+      } catch (error) {
+        console.error('Ошибка регистрации:', error);
+        alert('Ошибка при регистрации');
+      }
+    }
+    
+    // Вход
+    async function login(event) {
+      event.preventDefault();
+      
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+      
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          authToken = data.token;
+          currentUser = data.user;
+          document.getElementById('authContainer').classList.add('hidden');
+          document.getElementById('mainContainer').classList.remove('hidden');
+          document.getElementById('currentUserDisplay').textContent = `👤 ${currentUser.username}`;
+          
+          initUser();
+          loadDocuments();
+          loadMessages();
+          loadStats();
+          loadNotifications();
+        } else {
+          alert(data.error || 'Ошибка входа');
+        }
+      } catch (error) {
+        console.error('Ошибка входа:', error);
+        alert('Ошибка при входе');
+      }
+    }
+    
+    // Выход
+    function logout() {
+      authToken = null;
+      currentUser = null;
+      document.getElementById('authContainer').classList.remove('hidden');
+      document.getElementById('mainContainer').classList.add('hidden');
+      document.getElementById('loginForm').reset();
+    }
+    
+    // Инициализация пользователя в чате
+    function initUser() {
+      socket.emit('join', { name: currentUser.username, id: currentUser.id });
+    }
+    
+    // Загрузка документов
+    async function loadDocuments() {
+      try {
+        const response = await fetch('/api/documents');
+        const documents = await response.json();
+        renderDocuments(documents);
+      } catch (error) {
+        console.error('Ошибка загрузки документов:', error);
+      }
+    }
+    
+    // Загрузка сообщений
+    async function loadMessages() {
+      try {
+        const response = await fetch('/api/messages');
+        const messages = await response.json();
+        renderMessages(messages);
+      } catch (error) {
+        console.error('Ошибка загрузки сообщений:', error);
+      }
+    }
+    
+    // Отрисовка документов
+    function renderDocuments(docs) {
+      const container = document.getElementById('documentsList');
+      if (docs.length === 0) {
+        container.innerHTML = '<p style="color: #95a5a6; text-align: center; margin-top: 50px;">Документы отсутствуют</p>';
+        return;
+      }
+      
+      container.innerHTML = docs.map(doc => `
+        <div class="document-card" onclick="viewDocument('${doc.id}')">
+          <h3>${escapeHtml(doc.title)}</h3>
+          <p><strong>Автор:</strong> ${escapeHtml(doc.author)}</p>
+          <p><strong>Тип:</strong> ${getDocType(doc.type)}</p>
+          <p class="meta"><strong>Создан:</strong> ${formatDate(doc.createdAt)}</p>
+          ${doc.file ? `<div class="file-info">📎 Файл: ${escapeHtml(doc.file.originalname)} (${(doc.file.size / 1024).toFixed(1)} KB)</div>` : ''}
+          <p class="${doc.status === 'active' ? 'status-active' : 'status-archive'}">
+            Статус: ${doc.status === 'active' ? 'Активен' : 'Архив'}
+          </p>
+          <div style="margin-top: 10px;">
+            <button class="btn" onclick="event.stopPropagation(); editDocument('${doc.id}')">Редактировать</button>
+            <button class="btn btn-danger" onclick="event.stopPropagation(); deleteDocument('${doc.id}')">Удалить</button>
+            ${doc.file ? `<a href="/api/files/${doc.file.filename}" target="_blank" class="btn btn-success" onclick="event.stopPropagation();">Скачать</a>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    // Отрисовка сообщений
+    function renderMessages(msgs) {
+      const container = document.getElementById('chatMessages');
+      container.innerHTML = msgs.map(msg => `
+        <div class="message">
+          <div class="author">${escapeHtml(msg.author)}</div>
+          <div>${escapeHtml(msg.text)}</div>
+          <div class="timestamp">${formatTime(msg.timestamp)}</div>
+        </div>
+      `).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    // Отрисовка пользователей
+    function renderUsers(users) {
+      const container = document.getElementById('usersList');
+      container.innerHTML = users.map(user => `
+        <div class="user-item">
+          <span class="user-online">●</span> ${escapeHtml(user.name)}
+        </div>
+      `).join('');
+    }
+    
+    // Создание документа
+    async function createDocument(event) {
+      event.preventDefault();
+      
+      const title = document.getElementById('docTitle').value;
+      const author = document.getElementById('docAuthor').value;
+      const type = document.getElementById('docType').value;
+      const content = document.getElementById('docContent').value;
+      const fileInput = document.getElementById('docFile');
+      
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('author', author);
+      formData.append('type', type);
+      formData.append('content', content);
+      if (fileInput.files[0]) {
+        formData.append('file', fileInput.files[0]);
+      }
+      
+      try {
+        const response = await fetch('/api/documents', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${authToken}` },
+          body: formData
+        });
+        
+        if (response.ok) {
+          closeModal();
+          document.getElementById('documentForm').reset();
+          loadDocuments();
+        } else {
+          const data = await response.json();
+          alert(data.error || 'Ошибка создания документа');
+        }
+      } catch (error) {
+        console.error('Ошибка создания документа:', error);
+        alert('Ошибка при создании документа');
+      }
+    }
+    
+    // Просмотр документа
+    async function viewDocument(id) {
+      try {
+        const response = await fetch(`/api/documents/${id}`);
+        const doc = await response.json();
+        alert(`Документ: ${doc.title}\n\nАвтор: ${doc.author}\n\nСодержание:\n${doc.content}`);
+      } catch (error) {
+        console.error('Ошибка просмотра документа:', error);
+      }
+    }
+    
+    // Редактирование документа
+    async function editDocument(id) {
+      const newTitle = prompt('Новый заголовок:');
+      const newStatus = confirm('Изменить статус на "архив"?') ? 'archive' : 'active';
+      
+      if (!newTitle) return;
+      
+      try {
+        const response = await fetch(`/api/documents/${id}`, {
+          method: 'PUT',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ title: newTitle, status: newStatus })
+        });
+        
+        if (response.ok) {
+          loadDocuments();
+        } else {
+          const data = await response.json();
+          alert(data.error || 'Ошибка редактирования');
+        }
+      } catch (error) {
+        console.error('Ошибка редактирования документа:', error);
+      }
+    }
+    
+    // Удаление документа
+    async function deleteDocument(id) {
+      if (!confirm('Вы уверены, что хотите удалить этот документ?')) return;
+      
+      try {
+        const response = await fetch(`/api/documents/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        if (response.ok) {
+          loadDocuments();
+        } else {
+          const data = await response.json();
+          alert(data.error || 'Ошибка удаления');
+        }
+      } catch (error) {
+        console.error('Ошибка удаления документа:', error);
+      }
+    }
+    
+    // Отправка сообщения
+    function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      
+      if (!text) return;
+      
+      socket.emit('chat-message', { text });
+      input.value = '';
+    }
+    
+    // Обработка нажатия Enter
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    }
+    
+    // Индикатор набора текста
+    let typingTimeout;
+    function handleTyping() {
+      socket.emit('typing');
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        document.getElementById('typingIndicator').textContent = '';
+      }, 1000);
+    }
+    
+    // Модальное окно
+    function openModal() {
+      document.getElementById('documentModal').classList.add('active');
+    }
+    
+    function closeModal() {
+      document.getElementById('documentModal').classList.remove('active');
+    }
+    
+    // Вспомогательные функции
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function getDocType(type) {
+      const types = {
+        general: 'Общий',
+        contract: 'Договор',
+        report: 'Отчет',
+        memo: 'Служебная записка',
+        order: 'Приказ'
+      };
+      return types[type] || type;
+    }
+    
+    function formatDate(dateStr) {
+      return new Date(dateStr).toLocaleDateString('ru-RU', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+    
+    function formatTime(dateStr) {
+      return new Date(dateStr).toLocaleTimeString('ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+    
+    // Socket.IO события
+    socket.on('document-created', (doc) => {
+      loadDocuments();
+    });
+    
+    socket.on('document-updated', (doc) => {
+      loadDocuments();
+    });
+    
+    socket.on('document-deleted', () => {
+      loadDocuments();
+    });
+    
+    socket.on('chat-message', (msg) => {
+      const container = document.getElementById('chatMessages');
+      const messageEl = document.createElement('div');
+      messageEl.className = 'message';
+      messageEl.innerHTML = `
+        <div class="author">${escapeHtml(msg.author)}</div>
+        <div>${escapeHtml(msg.text)}</div>
+        <div class="timestamp">${formatTime(msg.timestamp)}</div>
+      `;
+      container.appendChild(messageEl);
+      container.scrollTop = container.scrollHeight;
+    });
+    
+    socket.on('current-users', (users) => {
+      renderUsers(users);
+    });
+    
+    socket.on('user-joined', (user) => {
+      loadMessages();
+    });
+    
+    socket.on('user-left', (user) => {
+      loadMessages();
+    });
+    
+    socket.on('user-typing', (userName) => {
+      const indicator = document.getElementById('typingIndicator');
+      indicator.textContent = `${userName} печатает...`;
+      setTimeout(() => {
+        indicator.textContent = '';
+      }, 2000);
+    });
+
+    socket.on('comment-added', (comment) => {
+      loadDocuments();
+    });
+
+    socket.on('notification', (notification) => {
+      showNotification(notification);
+    });
+
+    socket.on('notification-read', (notification) => {
+      loadNotifications();
+    });
+
+    // Уведомления
+    async function loadNotifications() {
+      try {
+        const response = await fetch('/api/notifications', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const notifications = await response.json();
+        renderNotifications(notifications);
+      } catch (error) {
+        console.error('Ошибка загрузки уведомлений:', error);
+      }
+    }
+
+    function renderNotifications(notifications) {
+      const panel = document.getElementById('notificationsPanel');
+      const countBadge = document.getElementById('notificationCount');
+      const unreadCount = notifications.filter(n => !n.read).length;
+      
+      if (unreadCount > 0) {
+        countBadge.textContent = unreadCount;
+        countBadge.classList.remove('hidden');
+      } else {
+        countBadge.classList.add('hidden');
+      }
+      
+      if (notifications.length === 0) {
+        panel.innerHTML = '<div style="padding: 20px; text-align: center; color: #95a5a6;">Нет уведомлений</div>';
+        return;
+      }
+      
+      panel.innerHTML = notifications.map(n => `
+        <div class="notification-item ${n.read ? '' : 'unread'}" onclick="markNotificationRead('${n.id}')">
+          <div style="font-size: 13px;">${escapeHtml(n.message)}</div>
+          <div style="font-size: 11px; color: #95a5a6; margin-top: 5px;">${formatTime(n.createdAt)}</div>
+        </div>
+      `).join('');
+    }
+
+    function toggleNotifications() {
+      const panel = document.getElementById('notificationsPanel');
+      panel.classList.toggle('active');
+      if (panel.classList.contains('active')) {
+        loadNotifications();
+      }
+    }
+
+    async function markNotificationRead(id) {
+      try {
+        await fetch(`/api/notifications/${id}/read`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        loadNotifications();
+      } catch (error) {
+        console.error('Ошибка отметки уведомления:', error);
+      }
+    }
+
+    function showNotification(notification) {
+      if (!notification.read) {
+        const countBadge = document.getElementById('notificationCount');
+        const currentCount = parseInt(countBadge.textContent) || 0;
+        countBadge.textContent = currentCount + 1;
+        countBadge.classList.remove('hidden');
+      }
+    }
+
+    // Поиск документов
+    async function searchDocuments() {
+      const query = document.getElementById('searchInput').value;
+      const type = document.getElementById('searchType').value;
+      const status = document.getElementById('searchStatus').value;
+      
+      const params = new URLSearchParams();
+      if (query) params.append('query', query);
+      if (type) params.append('type', type);
+      if (status) params.append('status', status);
+      
+      try {
+        const response = await fetch(`/api/search?${params}`);
+        const documents = await response.json();
+        renderDocuments(documents);
+      } catch (error) {
+        console.error('Ошибка поиска:', error);
+      }
+    }
+
+    // Загрузка статистики
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/stats', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const stats = await response.json();
+        
+        document.getElementById('statTotalDocs').textContent = stats.totalDocuments;
+        document.getElementById('statActiveDocs').textContent = stats.activeDocuments;
+        document.getElementById('statMessages').textContent = stats.totalMessages;
+        document.getElementById('statUsers').textContent = stats.totalUsers;
+      } catch (error) {
+        console.error('Ошибка загрузки статистики:', error);
+      }
+    }
+  </script>
+</body>
+</html>
