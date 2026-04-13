@@ -4,6 +4,11 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const { body, validationResult } = require('express-validator');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -18,17 +23,94 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Настройка multer для загрузки файлов
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${uuidv4()}-${file.originalname}`);
+  }
+});
+const upload = multer({ storage });
+
+// Секретный ключ для JWT
+const JWT_SECRET = 'your-secret-key-change-in-production';
+
 // Хранилище данных (в памяти)
 const documents = [];
 const messages = [];
 const users = new Map();
+const registeredUsers = []; // База зарегистрированных пользователей
+
+// Middleware для проверки аутентификации
+const authMiddleware = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Требуется авторизация' });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Неверный токен' });
+  }
+};
+
+// API для регистрации и авторизации
+app.post('/api/auth/register', [
+  body('username').notEmpty().withMessage('Имя пользователя обязательно'),
+  body('password').isLength({ min: 6 }).withMessage('Пароль должен быть не менее 6 символов')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  
+  const { username, password } = req.body;
+  
+  // Проверка существования пользователя
+  if (registeredUsers.find(u => u.username === username)) {
+    return res.status(400).json({ error: 'Пользователь уже существует' });
+  }
+  
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const user = {
+    id: uuidv4(),
+    username,
+    password: hashedPassword,
+    createdAt: new Date().toISOString()
+  };
+  
+  registeredUsers.push(user);
+  res.json({ message: 'Пользователь успешно зарегистрирован', userId: user.id });
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  const user = registeredUsers.find(u => u.username === username);
+  if (!user) {
+    return res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
+  }
+  
+  const isValid = await bcrypt.compare(password, user.password);
+  if (!isValid) {
+    return res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
+  }
+  
+  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
+  res.json({ token, user: { id: user.id, username: user.username } });
+});
 
 // API для документов
 app.get('/api/documents', (req, res) => {
   res.json(documents);
 });
 
-app.post('/api/documents', (req, res) => {
+app.post('/api/documents', authMiddleware, upload.single('file'), (req, res) => {
   const { title, content, author, type } = req.body;
   const document = {
     id: uuidv4(),
@@ -37,7 +119,14 @@ app.post('/api/documents', (req, res) => {
     author,
     type: type || 'general',
     createdAt: new Date().toISOString(),
-    status: 'active'
+    status: 'active',
+    createdBy: req.user.id,
+    file: req.file ? {
+      filename: req.file.filename,
+      originalname: req.file.originalname,
+      path: req.file.path,
+      size: req.file.size
+    } : null
   };
   documents.push(document);
   io.emit('document-created', document);
@@ -52,7 +141,7 @@ app.get('/api/documents/:id', (req, res) => {
   res.json(doc);
 });
 
-app.put('/api/documents/:id', (req, res) => {
+app.put('/api/documents/:id', authMiddleware, (req, res) => {
   const docIndex = documents.findIndex(d => d.id === req.params.id);
   if (docIndex === -1) {
     return res.status(404).json({ error: 'Document not found' });
@@ -68,7 +157,7 @@ app.put('/api/documents/:id', (req, res) => {
   res.json(documents[docIndex]);
 });
 
-app.delete('/api/documents/:id', (req, res) => {
+app.delete('/api/documents/:id', authMiddleware, (req, res) => {
   const docIndex = documents.findIndex(d => d.id === req.params.id);
   if (docIndex === -1) {
     return res.status(404).json({ error: 'Document not found' });
@@ -77,6 +166,15 @@ app.delete('/api/documents/:id', (req, res) => {
   const deletedDoc = documents.splice(docIndex, 1)[0];
   io.emit('document-deleted', { id: req.params.id });
   res.json({ message: 'Document deleted', document: deletedDoc });
+});
+
+// Загрузка файлов
+app.get('/api/files/:filename', (req, res) => {
+  const filePath = path.join(__dirname, 'uploads', req.params.filename);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Файл не найден' });
+  }
+  res.sendFile(filePath);
 });
 
 // API для сообщений чата

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Система документооборота</title>
+  <title>Система документооборота - Расширенная версия</title>
   <style>
     * {
       margin: 0;
@@ -14,6 +14,48 @@
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #f5f6fa;
+    }
+    
+    .auth-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .auth-box {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      width: 400px;
+    }
+    
+    .auth-box h2 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 30px;
+    }
+    
+    .auth-tabs {
+      display: flex;
+      margin-bottom: 20px;
+    }
+    
+    .auth-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      background: #ecf0f1;
+      border: none;
+      transition: all 0.3s;
+    }
+    
+    .auth-tab.active {
+      background: #3498db;
+      color: white;
     }
     
     .container {
@@ -39,7 +81,15 @@
       background: #34495e;
       color: white;
       padding: 20px;
-      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 15px;
     }
     
     .documents-panel {
@@ -103,6 +153,7 @@
       border-radius: 5px;
       cursor: pointer;
       margin: 5px;
+      transition: background 0.3s;
     }
     
     .btn:hover {
@@ -115,6 +166,14 @@
     
     .btn-danger:hover {
       background: #c0392b;
+    }
+    
+    .btn-success {
+      background: #27ae60;
+    }
+    
+    .btn-success:hover {
+      background: #229954;
     }
     
     .form-group {
@@ -231,10 +290,58 @@
       font-size: 12px;
       padding: 5px 15px;
     }
+    
+    .file-info {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
+  <!-- Окно авторизации -->
+  <div class="auth-container" id="authContainer">
+    <div class="auth-box">
+      <h2>🔐 Авторизация</h2>
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="showLogin()">Вход</button>
+        <button class="auth-tab" onclick="showRegister()">Регистрация</button>
+      </div>
+      
+      <form id="loginForm" onsubmit="login(event)">
+        <div class="form-group">
+          <label>Имя пользователя:</label>
+          <input type="text" id="loginUsername" required>
+        </div>
+        <div class="form-group">
+          <label>Пароль:</label>
+          <input type="password" id="loginPassword" required>
+        </div>
+        <button type="submit" class="btn" style="width: 100%;">Войти</button>
+      </form>
+      
+      <form id="registerForm" class="hidden" onsubmit="register(event)">
+        <div class="form-group">
+          <label>Имя пользователя:</label>
+          <input type="text" id="registerUsername" required>
+        </div>
+        <div class="form-group">
+          <label>Пароль (мин. 6 символов):</label>
+          <input type="password" id="registerPassword" required minlength="6">
+        </div>
+        <button type="submit" class="btn btn-success" style="width: 100%;">Зарегистрироваться</button>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Основной интерфейс -->
+  <div class="container hidden" id="mainContainer">
     <div class="sidebar">
       <h2>👥 Пользователи</h2>
       <div id="usersList" class="users-list"></div>
@@ -246,6 +353,10 @@
     <div class="main-content">
       <div class="header">
         <h1>🏢 Система документооборота организации</h1>
+        <div class="user-info">
+          <span id="currentUserDisplay"></span>
+          <button class="btn btn-danger" onclick="logout()">Выход</button>
+        </div>
       </div>
       
       <div class="documents-panel" id="documentsPanel">
@@ -291,6 +402,10 @@
           <label>Содержание:</label>
           <textarea id="docContent" required></textarea>
         </div>
+        <div class="form-group">
+          <label>Прикрепить файл:</label>
+          <input type="file" id="docFile">
+        </div>
         <button type="submit" class="btn">Создать</button>
         <button type="button" class="btn btn-danger" onclick="closeModal()">Отмена</button>
       </form>
@@ -301,15 +416,99 @@
   <script>
     const socket = io();
     let currentUser = null;
+    let authToken = null;
     
-    // Инициализация пользователя
-    function initUser() {
-      const userName = prompt('Введите ваше имя:', 'Пользователь') || 'Аноним';
-      currentUser = { name: userName, id: Date.now() };
-      socket.emit('join', currentUser);
+    // Переключение между входом и регистрацией
+    function showLogin() {
+      document.getElementById('loginForm').classList.remove('hidden');
+      document.getElementById('registerForm').classList.add('hidden');
+      document.querySelector('.auth-tab:first-child').classList.add('active');
+      document.querySelector('.auth-tab:last-child').classList.remove('active');
     }
     
-    initUser();
+    function showRegister() {
+      document.getElementById('loginForm').classList.add('hidden');
+      document.getElementById('registerForm').classList.remove('hidden');
+      document.querySelector('.auth-tab:first-child').classList.remove('active');
+      document.querySelector('.auth-tab:last-child').classList.add('active');
+    }
+    
+    // Регистрация
+    async function register(event) {
+      event.preventDefault();
+      
+      const username = document.getElementById('registerUsername').value;
+      const password = document.getElementById('registerPassword').value;
+      
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          alert('Регистрация успешна! Теперь войдите.');
+          showLogin();
+        } else {
+          alert(data.error || 'Ошибка регистрации');
+        }
+      } catch (error) {
+        console.error('Ошибка регистрации:', error);
+        alert('Ошибка при регистрации');
+      }
+    }
+    
+    // Вход
+    async function login(event) {
+      event.preventDefault();
+      
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+      
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          authToken = data.token;
+          currentUser = data.user;
+          document.getElementById('authContainer').classList.add('hidden');
+          document.getElementById('mainContainer').classList.remove('hidden');
+          document.getElementById('currentUserDisplay').textContent = `👤 ${currentUser.username}`;
+          
+          initUser();
+          loadDocuments();
+          loadMessages();
+        } else {
+          alert(data.error || 'Ошибка входа');
+        }
+      } catch (error) {
+        console.error('Ошибка входа:', error);
+        alert('Ошибка при входе');
+      }
+    }
+    
+    // Выход
+    function logout() {
+      authToken = null;
+      currentUser = null;
+      document.getElementById('authContainer').classList.remove('hidden');
+      document.getElementById('mainContainer').classList.add('hidden');
+      document.getElementById('loginForm').reset();
+    }
+    
+    // Инициализация пользователя в чате
+    function initUser() {
+      socket.emit('join', { name: currentUser.username, id: currentUser.id });
+    }
     
     // Загрузка документов
     async function loadDocuments() {
@@ -347,12 +546,14 @@
           <p><strong>Автор:</strong> ${escapeHtml(doc.author)}</p>
           <p><strong>Тип:</strong> ${getDocType(doc.type)}</p>
           <p class="meta"><strong>Создан:</strong> ${formatDate(doc.createdAt)}</p>
+          ${doc.file ? `<div class="file-info">📎 Файл: ${escapeHtml(doc.file.originalname)} (${(doc.file.size / 1024).toFixed(1)} KB)</div>` : ''}
           <p class="${doc.status === 'active' ? 'status-active' : 'status-archive'}">
             Статус: ${doc.status === 'active' ? 'Активен' : 'Архив'}
           </p>
           <div style="margin-top: 10px;">
             <button class="btn" onclick="event.stopPropagation(); editDocument('${doc.id}')">Редактировать</button>
             <button class="btn btn-danger" onclick="event.stopPropagation(); deleteDocument('${doc.id}')">Удалить</button>
+            ${doc.file ? `<a href="/api/files/${doc.file.filename}" target="_blank" class="btn btn-success" onclick="event.stopPropagation();">Скачать</a>` : ''}
           </div>
         </div>
       `).join('');
@@ -389,18 +590,31 @@
       const author = document.getElementById('docAuthor').value;
       const type = document.getElementById('docType').value;
       const content = document.getElementById('docContent').value;
+      const fileInput = document.getElementById('docFile');
+      
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('author', author);
+      formData.append('type', type);
+      formData.append('content', content);
+      if (fileInput.files[0]) {
+        formData.append('file', fileInput.files[0]);
+      }
       
       try {
         const response = await fetch('/api/documents', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, author, type, content })
+          headers: { 'Authorization': `Bearer ${authToken}` },
+          body: formData
         });
         
         if (response.ok) {
           closeModal();
           document.getElementById('documentForm').reset();
           loadDocuments();
+        } else {
+          const data = await response.json();
+          alert(data.error || 'Ошибка создания документа');
         }
       } catch (error) {
         console.error('Ошибка создания документа:', error);
@@ -429,12 +643,18 @@
       try {
         const response = await fetch(`/api/documents/${id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
           body: JSON.stringify({ title: newTitle, status: newStatus })
         });
         
         if (response.ok) {
           loadDocuments();
+        } else {
+          const data = await response.json();
+          alert(data.error || 'Ошибка редактирования');
         }
       } catch (error) {
         console.error('Ошибка редактирования документа:', error);
@@ -447,11 +667,15 @@
       
       try {
         const response = await fetch(`/api/documents/${id}`, {
-          method: 'DELETE'
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${authToken}` }
         });
         
         if (response.ok) {
           loadDocuments();
+        } else {
+          const data = await response.json();
+          alert(data.error || 'Ошибка удаления');
         }
       } catch (error) {
         console.error('Ошибка удаления документа:', error);
@@ -575,10 +799,6 @@
         indicator.textContent = '';
       }, 2000);
     });
-    
-    // Initial load
-    loadDocuments();
-    loadMessages();
   </script>
 </body>
 </html>
