@@ -92,6 +92,157 @@
       gap: 15px;
     }
     
+    .notification-badge {
+      position: relative;
+      cursor: pointer;
+    }
+    
+    .notification-count {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #e74c3c;
+      color: white;
+      border-radius: 50%;
+      padding: 2px 6px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    
+    .notifications-panel {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+      width: 350px;
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 1001;
+      display: none;
+    }
+    
+    .notifications-panel.active {
+      display: block;
+    }
+    
+    .notification-item {
+      padding: 15px;
+      border-bottom: 1px solid #ecf0f1;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .notification-item:hover {
+      background: #f8f9fa;
+    }
+    
+    .notification-item.unread {
+      background: #e8f4fd;
+    }
+    
+    .notification-item:last-child {
+      border-bottom: none;
+    }
+    
+    .search-panel {
+      background: white;
+      padding: 15px 20px;
+      border-bottom: 1px solid #bdc3c7;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .search-panel input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #bdc3c7;
+      border-radius: 5px;
+    }
+    
+    .search-panel select {
+      padding: 8px 12px;
+      border: 1px solid #bdc3c7;
+      border-radius: 5px;
+    }
+    
+    .stats-panel {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+    }
+    
+    .stat-card {
+      background: rgba(255,255,255,0.1);
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    
+    .stat-card h3 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+    
+    .stat-card p {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    
+    .comments-section {
+      background: #f8f9fa;
+      padding: 15px;
+      border-top: 1px solid #bdc3c7;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .comment-item {
+      background: white;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      font-size: 13px;
+    }
+    
+    .comment-item .author {
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+    
+    .comment-form {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .comment-form input {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #bdc3c7;
+      border-radius: 5px;
+    }
+    
+    .versions-list {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 5px;
+    }
+    
+    .version-item {
+      padding: 5px;
+      font-size: 12px;
+      color: #7f8c8d;
+      border-bottom: 1px solid #ecf0f1;
+    }
+    
     .documents-panel {
       flex: 1;
       padding: 20px;
@@ -355,8 +506,48 @@
         <h1>🏢 Система документооборота организации</h1>
         <div class="user-info">
           <span id="currentUserDisplay"></span>
+          <div class="notification-badge" onclick="toggleNotifications()">
+            🔔 <span class="notification-count hidden" id="notificationCount">0</span>
+          </div>
           <button class="btn btn-danger" onclick="logout()">Выход</button>
+          <div class="notifications-panel" id="notificationsPanel"></div>
         </div>
+      </div>
+      
+      <div class="stats-panel" id="statsPanel">
+        <div class="stat-card">
+          <h3 id="statTotalDocs">0</h3>
+          <p>Всего документов</p>
+        </div>
+        <div class="stat-card">
+          <h3 id="statActiveDocs">0</h3>
+          <p>Активных</p>
+        </div>
+        <div class="stat-card">
+          <h3 id="statMessages">0</h3>
+          <p>Сообщений</p>
+        </div>
+        <div class="stat-card">
+          <h3 id="statUsers">0</h3>
+          <p>Пользователей</p>
+        </div>
+      </div>
+      
+      <div class="search-panel">
+        <input type="text" id="searchInput" placeholder="Поиск документов..." onkeyup="searchDocuments()">
+        <select id="searchType" onchange="searchDocuments()">
+          <option value="">Все типы</option>
+          <option value="general">Общий</option>
+          <option value="contract">Договор</option>
+          <option value="report">Отчет</option>
+          <option value="memo">Служебная записка</option>
+          <option value="order">Приказ</option>
+        </select>
+        <select id="searchStatus" onchange="searchDocuments()">
+          <option value="">Все статусы</option>
+          <option value="active">Активные</option>
+          <option value="archive">Архив</option>
+        </select>
       </div>
       
       <div class="documents-panel" id="documentsPanel">
@@ -487,6 +678,8 @@
           initUser();
           loadDocuments();
           loadMessages();
+          loadStats();
+          loadNotifications();
         } else {
           alert(data.error || 'Ошибка входа');
         }
@@ -799,6 +992,122 @@
         indicator.textContent = '';
       }, 2000);
     });
+
+    socket.on('comment-added', (comment) => {
+      loadDocuments();
+    });
+
+    socket.on('notification', (notification) => {
+      showNotification(notification);
+    });
+
+    socket.on('notification-read', (notification) => {
+      loadNotifications();
+    });
+
+    // Уведомления
+    async function loadNotifications() {
+      try {
+        const response = await fetch('/api/notifications', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const notifications = await response.json();
+        renderNotifications(notifications);
+      } catch (error) {
+        console.error('Ошибка загрузки уведомлений:', error);
+      }
+    }
+
+    function renderNotifications(notifications) {
+      const panel = document.getElementById('notificationsPanel');
+      const countBadge = document.getElementById('notificationCount');
+      const unreadCount = notifications.filter(n => !n.read).length;
+      
+      if (unreadCount > 0) {
+        countBadge.textContent = unreadCount;
+        countBadge.classList.remove('hidden');
+      } else {
+        countBadge.classList.add('hidden');
+      }
+      
+      if (notifications.length === 0) {
+        panel.innerHTML = '<div style="padding: 20px; text-align: center; color: #95a5a6;">Нет уведомлений</div>';
+        return;
+      }
+      
+      panel.innerHTML = notifications.map(n => `
+        <div class="notification-item ${n.read ? '' : 'unread'}" onclick="markNotificationRead('${n.id}')">
+          <div style="font-size: 13px;">${escapeHtml(n.message)}</div>
+          <div style="font-size: 11px; color: #95a5a6; margin-top: 5px;">${formatTime(n.createdAt)}</div>
+        </div>
+      `).join('');
+    }
+
+    function toggleNotifications() {
+      const panel = document.getElementById('notificationsPanel');
+      panel.classList.toggle('active');
+      if (panel.classList.contains('active')) {
+        loadNotifications();
+      }
+    }
+
+    async function markNotificationRead(id) {
+      try {
+        await fetch(`/api/notifications/${id}/read`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        loadNotifications();
+      } catch (error) {
+        console.error('Ошибка отметки уведомления:', error);
+      }
+    }
+
+    function showNotification(notification) {
+      if (!notification.read) {
+        const countBadge = document.getElementById('notificationCount');
+        const currentCount = parseInt(countBadge.textContent) || 0;
+        countBadge.textContent = currentCount + 1;
+        countBadge.classList.remove('hidden');
+      }
+    }
+
+    // Поиск документов
+    async function searchDocuments() {
+      const query = document.getElementById('searchInput').value;
+      const type = document.getElementById('searchType').value;
+      const status = document.getElementById('searchStatus').value;
+      
+      const params = new URLSearchParams();
+      if (query) params.append('query', query);
+      if (type) params.append('type', type);
+      if (status) params.append('status', status);
+      
+      try {
+        const response = await fetch(`/api/search?${params}`);
+        const documents = await response.json();
+        renderDocuments(documents);
+      } catch (error) {
+        console.error('Ошибка поиска:', error);
+      }
+    }
+
+    // Загрузка статистики
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/stats', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const stats = await response.json();
+        
+        document.getElementById('statTotalDocs').textContent = stats.totalDocuments;
+        document.getElementById('statActiveDocs').textContent = stats.activeDocuments;
+        document.getElementById('statMessages').textContent = stats.totalMessages;
+        document.getElementById('statUsers').textContent = stats.totalUsers;
+      } catch (error) {
+        console.error('Ошибка загрузки статистики:', error);
+      }
+    }
   </script>
 </body>
 </html>

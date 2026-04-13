@@ -42,6 +42,9 @@ const documents = [];
 const messages = [];
 const users = new Map();
 const registeredUsers = []; // База зарегистрированных пользователей
+const comments = []; // Комментарии к документам
+const notifications = []; // Уведомления
+const documentVersions = new Map(); // Версии документов
 
 // Middleware для проверки аутентификации
 const authMiddleware = (req, res, next) => {
@@ -182,12 +185,118 @@ app.get('/api/messages', (req, res) => {
   res.json(messages.slice(-50)); // Последние 50 сообщений
 });
 
+// API для комментариев
+app.get('/api/documents/:id/comments', (req, res) => {
+  const docComments = comments.filter(c => c.documentId === req.params.id);
+  res.json(docComments);
+});
+
+app.post('/api/documents/:id/comments', authMiddleware, (req, res) => {
+  const { text } = req.body;
+  const comment = {
+    id: uuidv4(),
+    documentId: req.params.id,
+    text,
+    author: req.user.username,
+    userId: req.user.id,
+    createdAt: new Date().toISOString()
+  };
+  comments.push(comment);
+  
+  // Создаем уведомление для автора документа
+  const doc = documents.find(d => d.id === req.params.id);
+  if (doc && doc.createdBy !== req.user.id) {
+    const notification = {
+      id: uuidv4(),
+      userId: doc.createdBy,
+      type: 'comment',
+      message: `${req.user.username} оставил комментарий к документу "${doc.title}"`,
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    notifications.push(notification);
+    io.to(`user-${doc.createdBy}`).emit('notification', notification);
+  }
+  
+  io.emit('comment-added', comment);
+  res.json(comment);
+});
+
+// API для уведомлений
+app.get('/api/notifications', authMiddleware, (req, res) => {
+  const userNotifications = notifications.filter(n => n.userId === req.user.id);
+  res.json(userNotifications.slice(-20));
+});
+
+app.put('/api/notifications/:id/read', authMiddleware, (req, res) => {
+  const notification = notifications.find(n => n.id === req.params.id);
+  if (notification && notification.userId === req.user.id) {
+    notification.read = true;
+    io.emit('notification-read', notification);
+    res.json(notification);
+  } else {
+    res.status(404).json({ error: 'Уведомление не найдено' });
+  }
+});
+
+// API для версий документов
+app.get('/api/documents/:id/versions', (req, res) => {
+  const versions = documentVersions.get(req.params.id) || [];
+  res.json(versions);
+});
+
+// Поиск документов
+app.get('/api/search', (req, res) => {
+  const { query, type, status } = req.query;
+  let results = documents;
+  
+  if (query) {
+    const q = query.toLowerCase();
+    results = results.filter(d => 
+      d.title.toLowerCase().includes(q) || 
+      d.content.toLowerCase().includes(q) ||
+      d.author.toLowerCase().includes(q)
+    );
+  }
+  
+  if (type) {
+    results = results.filter(d => d.type === type);
+  }
+  
+  if (status) {
+    results = results.filter(d => d.status === status);
+  }
+  
+  res.json(results);
+});
+
+// Статистика
+app.get('/api/stats', authMiddleware, (req, res) => {
+  const stats = {
+    totalDocuments: documents.length,
+    activeDocuments: documents.filter(d => d.status === 'active').length,
+    archivedDocuments: documents.filter(d => d.status === 'archive').length,
+    totalMessages: messages.length,
+    totalUsers: registeredUsers.length,
+    documentsByType: {}
+  };
+  
+  documents.forEach(doc => {
+    stats.documentsByType[doc.type] = (stats.documentsByType[doc.type] || 0) + 1;
+  });
+  
+  res.json(stats);
+});
+
 // Socket.IO для чата
 io.on('connection', (socket) => {
   console.log('Пользователь подключился:', socket.id);
   
   socket.on('join', (userData) => {
     users.set(socket.id, userData);
+    if (userData.id) {
+      socket.join(`user-${userData.id}`);
+    }
     socket.broadcast.emit('user-joined', userData);
     socket.emit('current-users', Array.from(users.values()));
   });

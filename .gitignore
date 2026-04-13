@@ -2,10 +2,14 @@
 # Dependencies
 node_modules/
 
+# Build artifacts
+dist/
+build/
+target/
+
 # Logs and temp files
 *.log
 *.tmp
-*.swp
 
 # Environment
 .env
@@ -16,7 +20,30 @@ node_modules/
 .vscode/
 .idea/
 
-# Build artifacts
-dist/
-build/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Compiled files
+*.o
+*.obj
+*.so
+*.a
+*.dll
+*.exe
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+
+# System
+.DS_Store
+Thumbs.db
 ```
